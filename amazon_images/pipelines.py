@@ -18,7 +18,9 @@ class AmazonImagesPipeline(object):
                 CREATE TABLE IF NOT EXISTS urls(
                     id          INTEGER PRIMARY KEY AUTOINCREMENT,
                     url         VARCHAR(500),
-                    timestamp   DATETIME DEFAULT CURRENT_TIMESTAMP
+                    timestamp   DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    title       VARCHAR(500),
+                    seller_rank INTEGER
                 )
             """)
         finally:
@@ -39,8 +41,8 @@ class AmazonImagesPipeline(object):
             try:
                 cursor = spider.connection.cursor()
                 cursor.execute("""
-                    INSERT INTO urls(url) VALUES(?)
-                """, (item['url'],))
+                    INSERT INTO urls(url, title, seller_rank) VALUES(?, ?, ?)
+                """, (item['url'], item['title'], item['seller_rank']))
 
             finally:
                 spider.connection.commit()
