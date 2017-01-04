@@ -1,40 +1,38 @@
 # -*- coding: utf-8 -*-
 import scrapy
 from scrapy import Request
+from amazon_images import tools
 
 
 class AmazonImgSpider(scrapy.Spider):
     name = 'amazon_img'
     allowed_domains = ["amazon.com", "ssl-images-amazon.com"]
 
-    images_urls = [
-        'https://www.amazon.com/dp/B01981MRAW',
-        'https://www.amazon.com/dp/B00CUWPVGY',
-        'https://www.amazon.com/dp/B0186E1K2S',
-        'https://www.amazon.com/dp/B01GW5F2UY',
-        'https://www.amazon.com/dp/B0085N9CYE',
-        'https://www.amazon.com/dp/B016019XOQ',
-        'https://www.amazon.com/dp/B00XD00AO0',
-        'https://www.amazon.com/dp/B000AZ4ZLU',
-        'https://www.amazon.com/dp/B017V8XOL0',
-        'https://www.amazon.com/dp/B01K35XOM2',
-    ]
-
     def start_requests(self):
-        for url in self.images_urls:
-            yield Request(url, callback=self.parse)
+        # TODO: handle file absense.
+        try:
+            with open("urls.txt") as urls_buff:
+                for url in urls_buff:
+                    url = url.strip()
+                    if not tools.url_is_scraped(self.connection, url):
+                        yield Request(url, callback=self.parse_page)
+                    else:
+                        self.logger.info("Skipping scraped url: [{}]".format(url))
+        except IOError:
+            print("\n\n\nAdd your urls to urls.txt\n\n\n")
 
-    def parse(self, response):
+    def parse_page(self, response):
         img_xp = "//div[@id='imgTagWrapperId']/img/@data-old-hires"
         try:
             image_url = response.xpath(img_xp).extract()[0]
             resp_name = response.url.split('/')[-1]
             yield Request(image_url, callback=self.fetch_image,
-                          meta={'name': resp_name})
+                          meta={'name': resp_name, 'url': response.url})
 
         except IndexError:
             yield dict(image=None)
 
     def fetch_image(self, response):
         yield dict(data=response.body,
-                   name=response.meta['name'])
+                   name=response.meta['name'],
+                   url=response.meta['url'])
